@@ -8,14 +8,15 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
 from models_tree import Base, Product, Component, ItemFormula
 from tree_operations import (
-    buildTree, printTree, calcularTotal, 
-    buildTreeFromComponents, explodeProduct, 
+    buildTree, printTree, calcularTotal,
+    buildTreeFromComponents, explodeProduct,
     implodeComponent, printTreeFormatted
 )
 from flask_cors import CORS
 import os
 from io import StringIO
 import sys
+import re
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 DATABASE_URL = "sqlite:///" + os.path.join(basedir, "database_tree.db")
@@ -28,6 +29,8 @@ Base.metadata.create_all(engine)
 
 app = Flask(__name__)
 CORS(app)
+
+COMPONENT_NAME_PATTERN = re.compile(r'^[a-z\s]+$')
 
 def get_db():
     """Retorna uma sessão do banco de dados"""
@@ -100,12 +103,23 @@ def create_product():
             component_cost = comp_data.get("cost")
             quantity = comp_data.get("quantity", 1)
 
+            component_name = component_name.strip() if component_name else None
+            parent_name = parent_name.strip() if parent_name else None
+
             if not all([component_name, component_cost is not None]):
                 db.rollback()
                 return jsonify({"error": "Nome e custo são obrigatórios para todos os componentes"}), 400
 
+            if not COMPONENT_NAME_PATTERN.fullmatch(component_name):
+                db.rollback()
+                return jsonify({"error": "Os nomes dos componentes devem conter apenas letras minúsculas e espaços"}), 400
+
+            if parent_name and not COMPONENT_NAME_PATTERN.fullmatch(parent_name):
+                db.rollback()
+                return jsonify({"error": "Os nomes dos componentes devem conter apenas letras minúsculas e espaços"}), 400
+
             # Mantém o parent_name como está (pode ser None para raiz)
-            
+
             component = Component(
                 name=component_name,
                 parent_name=parent_name,
@@ -121,8 +135,10 @@ def create_product():
         # Segunda passagem: conecta pais e filhos
         for comp_data in components_data:
             component_name = comp_data.get("name")
+            component_name = component_name.strip() if component_name else None
             parent_name = comp_data.get("parent_name") or comp_data.get("parent")  # Aceita ambos os nomes
-            
+            parent_name = parent_name.strip() if parent_name else None
+
             if parent_name and parent_name in component_map:
                 component = component_map[component_name]
                 parent = component_map[parent_name]

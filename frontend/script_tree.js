@@ -1,6 +1,33 @@
 // Configuração da API
 const API_URL = 'http://localhost:5000';
 
+// Regras de validação para nomes de componentes
+const COMPONENT_NAME_PATTERN = /^[a-z\s]+$/;
+
+function sanitizeComponentInput(input) {
+    if (!input) return;
+    const sanitizedValue = input.value.toLowerCase().replace(/[^a-z\s]/g, '');
+    if (input.value !== sanitizedValue) {
+        input.value = sanitizedValue;
+    }
+}
+
+function attachComponentInputListeners(container) {
+    if (!container) return;
+    const inputs = container.querySelectorAll('.component-name, .component-parent');
+    inputs.forEach((input) => {
+        input.addEventListener('input', () => sanitizeComponentInput(input));
+    });
+}
+
+function isValidComponentName(name) {
+    return COMPONENT_NAME_PATTERN.test(name);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    attachComponentInputListeners(document.getElementById('componentsContainer'));
+});
+
 // Funções de limpeza para cada aba
 function clearCreateProductTab() {
     document.getElementById('productName').value = '';
@@ -13,6 +40,7 @@ function clearCreateProductTab() {
             <button class="remove-btn" onclick="removeComponent(this)">✖</button>
         </div>
     `;
+    attachComponentInputListeners(document.getElementById('componentsContainer'));
     const messageDiv = document.getElementById('createProductMessage');
     if (messageDiv) messageDiv.innerHTML = '';
 }
@@ -79,6 +107,7 @@ function addComponent() {
         <button class="remove-btn" onclick="removeComponent(this)">✖</button>
     `;
     container.appendChild(newGroup);
+    attachComponentInputListeners(newGroup);
 }
 
 // Remover componente
@@ -105,12 +134,17 @@ async function createProduct() {
         const parent = group.querySelector('.component-parent').value.trim() || null;
         const quantity = parseInt(group.querySelector('.component-quantity').value);
         const cost = parseFloat(group.querySelector('.component-cost').value);
-        
+
         if (!name || isNaN(quantity) || isNaN(cost)) {
             showMessage(messageDiv, 'Preencha todos os campos dos componentes corretamente.', 'error');
             return;
         }
-        
+
+        if (!isValidComponentName(name) || (parent && !isValidComponentName(parent))) {
+            showMessage(messageDiv, 'Os nomes dos componentes devem conter apenas letras minúsculas e espaços.', 'error');
+            return;
+        }
+
         components.push({ name, parent, quantity, cost });
     }
     
