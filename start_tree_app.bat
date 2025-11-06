@@ -12,16 +12,21 @@ if not exist venv (
 
 call venv\Scripts\activate
 
-pip install --upgrade pip >nul
+echo [INFO] Atualizando o pip...
+pip install --upgrade pip
+
+echo [INFO] Instalando dependencias do projeto...
 pip install -r backend\requirements_tree.txt
 
-REM Inicia o backend em uma nova janela
-start "Servidor Tree" cmd /c "cd /d \"%PROJECT_DIR%backend\" && python app_tree.py"
+echo [INFO] Iniciando o backend na janela "Servidor Tree"...
+start "Servidor Tree" cmd /k "cd /d \"%PROJECT_DIR%backend\" && call ..\venv\Scripts\activate && python app_tree.py"
 
-REM Aguarda alguns segundos para garantir que o servidor esteja pronto
-timeout /t 3 /nobreak >nul
+echo [INFO] Abrindo a interface index_tree.html no navegador padrao...
+start "" "%PROJECT_DIR%frontend\index_tree.html"
 
-REM Abre a interface web index_tree no navegador padrão
-start "" "http://127.0.0.1:5000/index_tree"
+echo.
+echo O servidor permanece ativo na janela "Servidor Tree". Para encerrar, feche a janela ou use CTRL+C nela.
+echo Esta janela pode ser fechada apos verificar que tudo iniciou corretamente.
+pause
 
 endlocal
