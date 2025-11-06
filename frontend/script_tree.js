@@ -71,6 +71,11 @@ function clearUpdateComponentTab() {
     document.getElementById('newCost').value = '';
     const messageDiv = document.getElementById('updateComponentMessage');
     if (messageDiv) messageDiv.innerHTML = '';
+    const resultDiv = document.getElementById('updateResult');
+    if (resultDiv) {
+        resultDiv.innerHTML = '';
+        resultDiv.className = 'result-box';
+    }
 }
 
 // Gerenciamento de Tabs
