@@ -32,6 +32,18 @@ CORS(app)
 
 COMPONENT_NAME_PATTERN = re.compile(r'^[a-z\s]+$')
 
+
+def sanitize_component_name(raw_name):
+    """Normaliza e valida nomes de componentes/produtos."""
+    if not isinstance(raw_name, str):
+        return None
+
+    sanitized = raw_name.strip().lower()
+    if not sanitized or not COMPONENT_NAME_PATTERN.fullmatch(sanitized):
+        return None
+
+    return sanitized
+
 def get_db():
     """Retorna uma sessão do banco de dados"""
     db = SessionLocal()
@@ -76,17 +88,21 @@ def create_product():
     db = get_db()
     try:
         data = request.get_json()
-        product_name = data.get("name")
+        raw_product_name = data.get("name")
+        if not raw_product_name:
+            return jsonify({"error": "O nome do produto é obrigatório"}), 400
+
+        product_name = sanitize_component_name(raw_product_name)
         components_data = data.get("components", [])
 
         if not product_name:
-            return jsonify({"error": "O nome do produto é obrigatório"}), 400
+            return jsonify({"error": "O nome do produto deve conter apenas letras minúsculas e espaços"}), 400
 
         # Verifica se já existe produto com este nome
         existing_product = db.query(Product).filter_by(name=product_name).first()
         if existing_product and existing_product.is_deleted == 0:
             return jsonify({"error": "Já existe um produto com este nome"}), 400
-        
+
         # Cria o produto
         new_product = Product(name=product_name)
         db.add(new_product)
@@ -103,45 +119,45 @@ def create_product():
             component_cost = comp_data.get("cost")
             quantity = comp_data.get("quantity", 1)
 
-            component_name = component_name.strip() if component_name else None
-            parent_name = parent_name.strip() if parent_name else None
-
-            if not all([component_name, component_cost is not None]):
+            if not component_name or component_cost is None:
                 db.rollback()
                 return jsonify({"error": "Nome e custo são obrigatórios para todos os componentes"}), 400
 
-            if not COMPONENT_NAME_PATTERN.fullmatch(component_name):
+            sanitized_component_name = sanitize_component_name(component_name)
+            sanitized_parent_name = sanitize_component_name(parent_name) if parent_name else None
+
+            if not sanitized_component_name:
                 db.rollback()
                 return jsonify({"error": "Os nomes dos componentes devem conter apenas letras minúsculas e espaços"}), 400
 
-            if parent_name and not COMPONENT_NAME_PATTERN.fullmatch(parent_name):
+            if parent_name and not sanitized_parent_name:
                 db.rollback()
                 return jsonify({"error": "Os nomes dos componentes devem conter apenas letras minúsculas e espaços"}), 400
 
             # Mantém o parent_name como está (pode ser None para raiz)
 
             component = Component(
-                name=component_name,
-                parent_name=parent_name,
+                name=sanitized_component_name,
+                parent_name=sanitized_parent_name,
                 cost=component_cost,
                 quantity=quantity,
                 product_id=new_product.id  # Todos os componentes pertencem ao produto
             )
             db.add(component)
-            component_map[component_name] = component
-        
+            component_map[sanitized_component_name] = component
+            comp_data["_sanitized_name"] = sanitized_component_name
+            comp_data["_sanitized_parent"] = sanitized_parent_name
+
         db.flush()  # Para obter os IDs
-        
+
         # Segunda passagem: conecta pais e filhos
         for comp_data in components_data:
-            component_name = comp_data.get("name")
-            component_name = component_name.strip() if component_name else None
-            parent_name = comp_data.get("parent_name") or comp_data.get("parent")  # Aceita ambos os nomes
-            parent_name = parent_name.strip() if parent_name else None
+            sanitized_component_name = comp_data.get("_sanitized_name")
+            sanitized_parent_name = comp_data.get("_sanitized_parent")
 
-            if parent_name and parent_name in component_map:
-                component = component_map[component_name]
-                parent = component_map[parent_name]
+            if sanitized_parent_name and sanitized_parent_name in component_map:
+                component = component_map[sanitized_component_name]
+                parent = component_map[sanitized_parent_name]
                 component.parent_id = parent.id
         
         # Define o componente raiz (primeiro sem pai)
