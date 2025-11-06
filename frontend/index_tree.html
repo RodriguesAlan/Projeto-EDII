@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciamento de Produtos - Estrutura de Árvores</title>
+    <link rel="stylesheet" href="style_tree.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Gerenciamento de Produtos</h1>
+        <p class="subtitle">Sistema com suporte a hierarquia de componentes, explosão e implosão</p>
+
+        <div class="tab-container">
+            <div class="tab-buttons">
+                <button class="tab-button active" onclick="openTab(event, 'createProduct')">Criar Produto</button>
+                <button class="tab-button" onclick="openTab(event, 'viewProducts')">Ver Produtos</button>
+                <button class="tab-button" onclick="openTab(event, 'explosion')">Explosão</button>
+                <button class="tab-button" onclick="openTab(event, 'updateComponent')">Atualizar Componente</button>
+
+            </div>
+
+            <!-- ABA: Criar Produto -->
+            <div id="createProduct" class="tab-content active">
+                <h2>Criar Novo Produto com Hierarquia</h2>
+                <p class="info"><strong>IMPORTANTE:</strong> Cadastre TODOS os componentes, incluindo o produto raiz.</p>
+                <p class="info"><strong>Exemplo - Computador:</strong><br>
+                1. Nome: "Computador", Pai: (vazio), Qtd: 1, Custo: 2500.00 ← Raiz<br>
+                2. Nome: "Gabinete", Pai: "Computador", Qtd: 1, Custo: 800.00<br>
+                3. Nome: "Placa-Mãe", Pai: "Gabinete", Qtd: 1, Custo: 500.00<br>
+                <strong>Dica:</strong> O primeiro componente (sem pai) é a raiz da árvore.</p>
+                
+                <label for="productName">Nome do Produto:</label>
+                <input type="text" id="productName" placeholder="Ex: Caneta, Computador">
+
+                <h3>Componentes</h3>
+                <div id="componentsContainer">
+                    <div class="component-input-group">
+                        <input type="text" class="component-name" placeholder="Nome do Componente">
+                        <input type="text" class="component-parent" placeholder="Pai (deixe vazio para raiz)">
+                        <input type="number" class="component-quantity" placeholder="Quantidade" min="1" value="1">
+                        <input type="number" class="component-cost" step="0.01" placeholder="Custo" min="0">
+                        <button class="remove-btn" onclick="removeComponent(this)">✖</button>
+                    </div>
+                </div>
+                
+                <div class="button-group">
+                    <button class="btn-secondary" onclick="addComponent()">➕ Adicionar Componente</button>
+                    <button class="btn-primary" onclick="createProduct()">✅ Criar Produto</button>
+                </div>
+                <div id="createProductMessage" class="message"></div>
+            </div>
+
+            <!-- ABA: Ver Produtos -->
+            <div id="viewProducts" class="tab-content">
+                <h2>Produtos Cadastrados</h2>
+                <button class="btn-secondary" onclick="loadProducts()">🔄 Atualizar Lista</button>
+                <div id="productsList"></div>
+                <div id="productDetails"></div>
+            </div>
+
+            <!-- ABA: Explosão -->
+            <div id="explosion" class="tab-content">
+                <h2>Explosão de Produto</h2>
+                <p class="info">Calcule quantos componentes são necessários para produzir uma quantidade específica.</p>
+                
+                <label for="explosionProductSelect">Selecione o Produto:</label>
+                <select id="explosionProductSelect"></select>
+
+                <label for="explosionQuantity">Quantidade a Produzir:</label>
+                <input type="number" id="explosionQuantity" placeholder="Ex: 100" min="1">
+
+                <button class="btn-primary" onclick="calculateExplosion()">💥 Calcular Explosão</button>
+                <div id="explosionResult" class="result-box"></div>
+            </div>
+
+            <!-- ABA: Atualizar Componente -->
+            <div id="updateComponent" class="tab-content">
+                <h2>Atualizar Componente (Implosão)</h2>
+                <p class="info">Atualize o preço de um componente. O sistema recalculará automaticamente o custo de todos os produtos afetados.</p>
+                
+                <label for="updateProductSelect">Selecione o Produto:</label>
+                <select id="updateProductSelect" onchange="loadComponentsForUpdate()">
+                    <option value="">Selecione um produto</option>
+                </select>
+
+                <label for="updateComponentSelect">Selecione o Componente:</label>
+                <select id="updateComponentSelect">
+                    <option value="">Primeiro selecione um produto</option>
+                </select>
+
+                <label for="newCost">Novo Custo:</label>
+                <input type="number" id="newCost" step="0.01" placeholder="Novo custo" min="0">
+
+                <button class="btn-primary" onclick="updateComponent()">🔄 Atualizar e Implodir</button>
+                <div id="updateResult" class="result-box"></div>
+            </div>
+
+
+        </div>
+    </div>
+
+    <script src="script_tree.js"></script>
+</body>
+</html>
