@@ -1,6 +1,42 @@
 // Configuração da API
 const API_URL = 'http://localhost:5000';
 
+// Regras de validação para nomes de componentes
+const COMPONENT_NAME_PATTERN = /^[a-z\s]+$/;
+
+function sanitizeNameValue(value) {
+    if (!value) return '';
+    return value.toLowerCase();
+}
+
+function sanitizeNameInput(input) {
+    if (!input) return;
+    const sanitizedValue = sanitizeNameValue(input.value);
+    if (input.value !== sanitizedValue) {
+        input.value = sanitizedValue;
+    }
+}
+
+function attachComponentInputListeners(container) {
+    if (!container) return;
+    const inputs = container.querySelectorAll('.component-name, .component-parent');
+    inputs.forEach((input) => {
+        input.addEventListener('input', () => sanitizeNameInput(input));
+    });
+}
+
+function isValidComponentName(name) {
+    return typeof name === 'string' && name.trim().length > 0 && COMPONENT_NAME_PATTERN.test(name);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    attachComponentInputListeners(document.getElementById('componentsContainer'));
+    const productNameInput = document.getElementById('productName');
+    if (productNameInput) {
+        productNameInput.addEventListener('input', () => sanitizeNameInput(productNameInput));
+    }
+});
+
 // Funções de limpeza para cada aba
 function clearCreateProductTab() {
     document.getElementById('productName').value = '';
@@ -13,6 +49,7 @@ function clearCreateProductTab() {
             <button class="remove-btn" onclick="removeComponent(this)">✖</button>
         </div>
     `;
+    attachComponentInputListeners(document.getElementById('componentsContainer'));
     const messageDiv = document.getElementById('createProductMessage');
     if (messageDiv) messageDiv.innerHTML = '';
 }
@@ -34,6 +71,11 @@ function clearUpdateComponentTab() {
     document.getElementById('newCost').value = '';
     const messageDiv = document.getElementById('updateComponentMessage');
     if (messageDiv) messageDiv.innerHTML = '';
+    const resultDiv = document.getElementById('updateResult');
+    if (resultDiv) {
+        resultDiv.innerHTML = '';
+        resultDiv.className = 'result-box';
+    }
 }
 
 // Gerenciamento de Tabs
@@ -79,6 +121,7 @@ function addComponent() {
         <button class="remove-btn" onclick="removeComponent(this)">✖</button>
     `;
     container.appendChild(newGroup);
+    attachComponentInputListeners(newGroup);
 }
 
 // Remover componente
@@ -88,29 +131,56 @@ function removeComponent(button) {
 
 // Criar produto
 async function createProduct() {
-    const productName = document.getElementById('productName').value.trim();
+    const productNameInput = document.getElementById('productName');
+    sanitizeNameInput(productNameInput);
+    const productName = sanitizeNameValue(productNameInput.value).trim();
+    productNameInput.value = productName;
     const messageDiv = document.getElementById('createProductMessage');
-    
+
     if (!productName) {
         showMessage(messageDiv, 'Por favor, insira o nome do produto.', 'error');
         return;
     }
-    
+
+    if (!isValidComponentName(productName)) {
+        showMessage(messageDiv, 'O nome do produto deve conter apenas letras minúsculas e espaços.', 'error');
+        return;
+    }
+
     // Coleta componentes
     const componentGroups = document.querySelectorAll('#componentsContainer .component-input-group');
     const components = [];
-    
+
     for (let group of componentGroups) {
-        const name = group.querySelector('.component-name').value.trim();
-        const parent = group.querySelector('.component-parent').value.trim() || null;
+        const nameInput = group.querySelector('.component-name');
+        const parentInput = group.querySelector('.component-parent');
+
+        sanitizeNameInput(nameInput);
+        sanitizeNameInput(parentInput);
+
+        const name = sanitizeNameValue(nameInput.value).trim();
+        const parentRaw = parentInput.value ? sanitizeNameValue(parentInput.value).trim() : '';
+        nameInput.value = name;
+        parentInput.value = parentRaw;
+        const parent = parentRaw || null;
         const quantity = parseInt(group.querySelector('.component-quantity').value);
         const cost = parseFloat(group.querySelector('.component-cost').value);
-        
+
         if (!name || isNaN(quantity) || isNaN(cost)) {
             showMessage(messageDiv, 'Preencha todos os campos dos componentes corretamente.', 'error');
             return;
         }
-        
+
+        if (!isValidComponentName(name)) {
+            showMessage(messageDiv, 'Os nomes dos componentes devem conter apenas letras minúsculas e espaços.', 'error');
+            return;
+        }
+
+        if (parent && !isValidComponentName(parent)) {
+            showMessage(messageDiv, 'Os nomes dos componentes devem conter apenas letras minúsculas e espaços.', 'error');
+            return;
+        }
+
         components.push({ name, parent, quantity, cost });
     }
     
